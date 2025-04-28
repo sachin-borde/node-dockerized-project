@@ -1,18 +1,18 @@
-jenkinsfile {
+pipeline {
     agent any
     stages {
-        stage("checkout){
+        stage('checkout') {
             steps {
                 checkout scm
             }
         }
-        stage("test"){
+        stage('test') {
             steps {
-                sh 'sudo npm install'
+                sh 'npm install'
                 sh 'npm test'
             }
         }
-        stage("build"){
+        stage('build') {
             steps {
                 sh 'npm run build'
             }
