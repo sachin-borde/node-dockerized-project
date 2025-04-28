@@ -1,25 +1,30 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'docker:24.0.5'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
     stages {
-        stage('checkout') {
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-        stage('test') {
+        stage('Test') {
             steps {
                 sh 'npm install'
                 sh 'npm test'
             }
         }
-        stage('build') {
+        stage('Build') {
             steps {
                 sh 'npm run build'
             }
         }
-        stage('build image') {
+        stage('Build Image') {
             steps {
-                sh 'docker build -t my-node-app:1.0 .'
+                sh 'DOCKER_BUILDKIT=1 docker buildx build -t my-node-app:1.0 .'
             }
         }
     }
