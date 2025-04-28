@@ -1,58 +1,52 @@
 pipeline {
-    agent {
-        docker {
-            image 'docker:24.0.5-dind'  // Use Docker-in-Docker (DinD) image
-            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
-        }
+  agent any
+
+  environment {
+    IMAGE_NAME = "YOUR_DOCKERHUB_USERNAME/your-node-repo"
+    IMAGE_TAG  = "${env.BUILD_NUMBER}"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git url: 'https://github.com/sachin-borde/node-dockerized-project.git', branch: 'main'
+      }
     }
-    environment {
-        DOCKER_BUILDKIT = '1'  // Enable Docker BuildKit
+
+    stage('Build Docker Image') {
+      steps {
+        script {
+          // Build Docker image from Dockerfile in repo root
+          dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+        }
+      }
     }
-    stages {
-        stage('Checkout Code') {
-            steps {
-                checkout scm
-            }
+
+    stage('Push to Docker Hub') {
+      steps {
+        script {
+          // Use credentials 'dockerhub-creds' defined in Jenkins
+          docker.withRegistry('', 'dockerhub-creds') {
+            dockerImage.push("${IMAGE_TAG}")   // push with build-number tag
+            dockerImage.push('latest')         // also tag as 'latest'
+          }
         }
-        stage('Setup Node.js') {
-            steps {
-                sh '''
-                    apk add --no-cache nodejs npm  # Install Node.js in Alpine
-                    node --version
-                    npm --version
-                '''
-            }
-        }
-        stage('Install Dependencies') {
-            steps {
-                sh 'npm install'
-            }
-        }
-        stage('Run Tests') {
-            steps {
-                sh 'npm test'
-            }
-        }
-        stage('Build App') {
-            steps {
-                sh 'npm run build'
-            }
-        }
-        stage('Build Docker Image') {
-            steps {
-                sh '''
-                    docker buildx create --use
-                    docker buildx build \
-                        --platform linux/amd64 \
-                        -t my-node-app:1.0 \
-                        --load .
-                '''
-            }
-        }
+      }
     }
-    post {
-        always {
-            sh 'docker system prune -f'  // Cleanup Docker artifacts
-        }
+
+    stage('Verify Deployment') {
+      steps {
+        // Optional: run your image briefly to sanity-check
+        sh """
+          docker run --rm ${IMAGE_NAME}:${IMAGE_TAG} node --version
+        """
+      }
     }
+  }
+
+  post {
+    always {
+      cleanWs()  // clean workspace after each run
+    }
+  }
 }
