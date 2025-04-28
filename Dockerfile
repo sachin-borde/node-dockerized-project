@@ -1,23 +1,24 @@
-# 1. Use a stable, minimal image
+# 1. Use a fixed LTS, minimal image
 FROM node:lts-alpine
 
-# 2. Create & switch to a non-root user
-#    Official Node images include a 'node' user
+# 2. Create app directory as root, then chown it
+RUN mkdir -p /home/node/app \
+    && chown -R node:node /home/node/app
+
+# 3. Switch to non-root node user
 USER node
 
-# 3. Set working directory
+# 4. Set working directory
 WORKDIR /home/node/app
 
-# 4. Copy only package manifests & install dependencies
+# 5. Copy package files and install deps
 COPY --chown=node:node package*.json ./
 RUN npm ci --only=production
 
-# 5. Copy app source
+# 6. Copy app source, preserving ownership
 COPY --chown=node:node . .
 
-# 6. Expose port and set environment
+# 7. Prod settings and entrypoint
 ENV NODE_ENV=production
 EXPOSE 3000
-
-# 7. Run as non-root
 CMD ["node", "index.js"]
