@@ -1,9 +1,14 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'docker:24.0.5'
+            args  '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
     stages {
         stage('Checkout') {
             steps {
-                checkout scm 
+                checkout scm
             }
         }
         stage('Test') {
@@ -13,8 +18,8 @@ pipeline {
             }
         }
         stage('Build') {
-            steps { 
-                sh 'npm run build' 
+            steps {
+                sh 'npm run build'
             }
         }
         stage('Build Image') {
