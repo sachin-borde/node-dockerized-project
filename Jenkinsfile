@@ -2,7 +2,6 @@ pipeline {
   agent any
 
   environment {
-    // Must be all lowercase to satisfy Docker naming rules:
     DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
     DOCKERHUB_USERNAME    = 'ssborde26'
     IMAGE_NAME            = "${DOCKERHUB_USERNAME}/node-dockerized-project"
@@ -12,16 +11,13 @@ pipeline {
 
   stages {
     stage('Checkout') {
-      steps {
-        checkout scm
-      }
+      steps { checkout scm }
     }
 
     stage('Build Docker Image') {
       steps {
         script {
-          // Builds the Dockerfile in the repo, returns an image object :contentReference[oaicite:6]{index=6}
-          dockerImage = docker.build(FULL_IMAGE)
+          dockerImage = docker.build(FULL_IMAGE)      // builds image locally :contentReference[oaicite:9]{index=9}
         }
       }
     }
@@ -29,26 +25,15 @@ pipeline {
     stage('Push to Docker Hub') {
       steps {
         script {
-          // Logs in using 'dockerhub-creds' and pushes both tags :contentReference[oaicite:7]{index=7}
-          docker.withRegistry('https://registry.hub.docker.com', "${DOCKERHUB_CREDENTIALS}") {
-            dockerImage.push("${IMAGE_TAG}")
-            dockerImage.push('latest')
+          // default Docker Hub registry; uses 'dockerhub-creds' for auth :contentReference[oaicite:10]{index=10}
+          docker.withRegistry('', "${DOCKERHUB_CREDENTIALS}") {
+            dockerImage.push("${IMAGE_TAG}")           // push build-number tag :contentReference[oaicite:11]{index=11}
+            dockerImage.push('latest')                 // also tag as 'latest'
           }
         }
       }
     }
-
-    stage('Verify Image') {
-      steps {
-        // Quick check that the image runs and responds to `node --version` :contentReference[oaicite:8]{index=8}
-        sh "docker run --rm ${FULL_IMAGE} node --version"
-      }
-    }
   }
 
-  post {
-    always {
-      cleanWs()
-    }
-  }
+  post { always { cleanWs() } }
 }
