@@ -24,7 +24,7 @@ pipeline {
         }
         stage('Build Image') {
             steps {
-                sh 'DOCKER_BUILDKIT=1 docker buildx build -t my-node-app:1.0 .'
+                sh 'DOCKER_BUILDKIT=1 docker buildx build --tag my-node-app:1.0 --load .'
             }
         }
     }
