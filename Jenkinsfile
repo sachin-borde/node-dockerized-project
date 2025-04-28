@@ -2,22 +2,26 @@ pipeline {
   agent any
 
   environment {
-    IMAGE_NAME = "YOUR_DOCKERHUB_USERNAME/your-node-repo"
-    IMAGE_TAG  = "${env.BUILD_NUMBER}"
+    // Must be all lowercase to satisfy Docker naming rules:
+    DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
+    DOCKERHUB_USERNAME    = 'ssborde26'
+    IMAGE_NAME            = "${DOCKERHUB_USERNAME}/node-dockerized-project"
+    IMAGE_TAG             = "${env.BUILD_NUMBER}"
+    FULL_IMAGE            = "${IMAGE_NAME}:${IMAGE_TAG}"
   }
 
   stages {
     stage('Checkout') {
       steps {
-        git url: 'https://github.com/sachin-borde/node-dockerized-project.git', branch: 'main'
+        checkout scm
       }
     }
 
     stage('Build Docker Image') {
       steps {
         script {
-          // Build Docker image from Dockerfile in repo root
-          dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+          // Builds the Dockerfile in the repo, returns an image object :contentReference[oaicite:6]{index=6}
+          dockerImage = docker.build(FULL_IMAGE)
         }
       }
     }
@@ -25,28 +29,26 @@ pipeline {
     stage('Push to Docker Hub') {
       steps {
         script {
-          // Use credentials 'dockerhub-creds' defined in Jenkins
-          docker.withRegistry('', 'dockerhub-creds') {
-            dockerImage.push("${IMAGE_TAG}")   // push with build-number tag
-            dockerImage.push('latest')         // also tag as 'latest'
+          // Logs in using 'dockerhub-creds' and pushes both tags :contentReference[oaicite:7]{index=7}
+          docker.withRegistry('https://registry.hub.docker.com', "${DOCKERHUB_CREDENTIALS}") {
+            dockerImage.push("${IMAGE_TAG}")
+            dockerImage.push('latest')
           }
         }
       }
     }
 
-    stage('Verify Deployment') {
+    stage('Verify Image') {
       steps {
-        // Optional: run your image briefly to sanity-check
-        sh """
-          docker run --rm ${IMAGE_NAME}:${IMAGE_TAG} node --version
-        """
+        // Quick check that the image runs and responds to `node --version` :contentReference[oaicite:8]{index=8}
+        sh "docker run --rm ${FULL_IMAGE} node --version"
       }
     }
   }
 
   post {
     always {
-      cleanWs()  // clean workspace after each run
+      cleanWs()
     }
   }
 }
